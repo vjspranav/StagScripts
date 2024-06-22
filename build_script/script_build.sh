@@ -28,8 +28,8 @@ fi
 # Send message to TG
 read -r -d '' msg <<EOT
 <b>Build Started</b>
-<b>Device:-</b> "${device_codename}"
-<b>Maintainer:-</b> "${maintainer}"
+<b>Device:-</b> ${device_codename}
+<b>Maintainer:-</b> ${maintainer}
 <b>Build Url:-</b> <a href="${BUILD_URL}console">here</a>
 EOT
 
@@ -52,10 +52,11 @@ rm -rf /var/lib/jenkins/target_files/${device_codename}/cur/*
 if [ "${reset}" = "yes" ];
 then
 rm -rf .repo/local_manifests
-rm -rf .repo/projects/device .repo/projects/hardware .repo/projects/kernel .repo/projects/vendor .repo/projects/prebuilts
-rm -rf device hardware kernel vendor prebuilts
+rm -rf .repo/projects/device .repo/projects/hardware .repo/projects/kernel .repo/projects/vendor
+rm -rf device hardware kernel vendor
 echo -e ${cya}"Removing extra/dirty dependencies"${txtrst}
-repo sync --force-sync --force-remove-dirty --no-tags --no-clone-bundle -j$(nproc --all)
+echo -e ${grn}"Syncing fresh sources"${txtrst}
+repo sync --force-sync -c --no-tags --no-clone-bundle -j$(nproc --all) --optimized-fetch --prune
 echo -e ${grn}"Fresh Sync"${txtrst}
 fi
 
@@ -85,7 +86,12 @@ fi
 rm -rf ${OUT_PATH}/Stag*.zip #clean rom zip in any case
 
 # Initialize build
-. build/envsetup.sh
+source build/envsetup.sh
+
+# If lunch fails don't continue
+if ! lunch stag_"${device_codename}"-"${release_type}"-"${build_type}"; then
+  exit 1
+fi
 
 # Make clean
 if [ "$make_clean" = "yes" ];
@@ -102,11 +108,6 @@ wait
 echo -e ${cya}"Images deleted from OUT dir"${txtrst};
 fi
 
-# If lunch fails don't continue
-if ! lunch stag_"${device_codename}"-"${release_type}"-"${build_type}"; then
-  exit 1
-fi
-
 # Accounting for any vendorsetup changes
 . build/envsetup.sh
 
@@ -115,8 +116,15 @@ if ! lunch stag_"${device_codename}"-"${release_type}"-"${build_type}"; then
   exit 1
 fi
 
-echo $device_codename > current_device
-echo "Pristine" > build_type
+# .repo/local_manifests/stag_manifest.xml exists then go to all projects and run git lfs pull
+if [ -d ".repo/local_manifests" ]; then
+    for i in `grep 'path=' .repo/local_manifests/stag_manifest.xml | sed 's/.*path="//;s/".*//'`; do
+        cd $i
+        git lfs pull
+        cd $BUILD_PATH
+    done
+fi
+
 make stag -j$(nproc --all)
 
 if [ `ls ${OUT_PATH}/StagOS*.zip 2>/dev/null | wc -l` != "0" ]; then
@@ -130,8 +138,8 @@ test_link="https://test.stag-os.org/${device_codename}/${RZIP}"
 
 read -r -d '' msg <<EOT
 <b>Pristine Build Completed</b>
-<b>Device:-</b> "${device_codename}"
-<b>Maintainer:-</b> "${maintainer}"
+<b>Device:-</b> ${device_codename}
+<b>Maintainer:-</b> ${maintainer}
 <b>Download:-</b> <a href="${test_link}">here</a>
 EOT
 
