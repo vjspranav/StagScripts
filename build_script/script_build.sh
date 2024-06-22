@@ -17,6 +17,8 @@ export BUILD_TYPE=OFFICIAL
 KBUILD_BUILD_USER="StagOS"
 KBUILD_BUILD_HOST="Jenkins"
 VERSION=14.3.0
+export STAG_RELEASE_KEYS=.android-certs/releasekey
+export PRODUCT_DEFAULT_DEV_CERTIFICATE=./.android-certs/releasekey
 
 if [[ -z "$device_codename" ]]; then
     echo "Must provide device_codename in environment" 1>&2
