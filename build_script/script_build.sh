@@ -157,8 +157,44 @@ cp full_update_pristine.json /var/lib/jenkins/ota/${device_codename}/full_update
 
 CUR_TARGET_FOL=${RZIP::-4}-target_files
 
-cp obj/PACKAGING/target_files_intermediates/${CUR_TARGET_FOL} /var/lib/jenkins/target_files/${device_codename}/cur/
-echo -e ${grn}"Target zip for pristine copied"${txtrst};
+cp -r obj/PACKAGING/target_files_intermediates/${CUR_TARGET_FOL} /var/lib/jenkins/target_files/${device_codename}/cur/
+echo -e ${grn}"Target folder for pristine copied"${txtrst};
+
+INCREMENTAL_STATUS=1
+# /var/lib/jenkins/target_files/${device_codename}/rel check if Pristine rel exists
+if find /var/lib/jenkins/target_files/${device_codename}/rel/ -type d -name "*Pristine*" | grep -q .; then
+  echo -e "${grn}Generating incremental update${txtrst}";
+
+  # Find the directory matching the pattern and get the basename
+  REL_TARGET_FOL=$(find /var/lib/jenkins/target_files/${device_codename}/rel/ -type d -name "*Pristine*" -print -quit)
+  # Extract the directory name
+  REL_TARGET_FOL=$(basename "$REL_TARGET_FOL")
+
+  # Set variables
+  TYPE=$(echo ${REL_TARGET_FOL} | cut -d'-' -f5)
+  OLD_DATE=$(echo ${REL_TARGET_FOL} | cut -d'-' -f6-7)
+  NEW_DATE=$(echo ${CUR_TARGET_FOL} | cut -d'-' -f6-7)
+
+  INCREMENTAL_FILE_NAME=StagOS-${device_codename}-incremental-${TYPE}-${OLD_DATE}-${NEW_DATE}.zip
+
+  # Generate incremental update
+  # go to BUILD_PATH
+  cd $BUILD_PATH
+  ota_from_target_files -i /var/lib/jenkins/target_files/${device_codename}/rel/${REL_TARGET_FOL} /var/lib/jenkins/target_files/${device_codename}/cur/${CUR_TARGET_FOL} /var/lib/jenkins/builds/${device_codename}/${INCREMENTAL_FILE_NAME}
+
+  # Check if incremental update was generated
+  if [ ! -f /var/lib/jenkins/builds/${device_codename}/${INCREMENTAL_FILE_NAME} ]; then
+    echo -e ${red}"Incremental update failed to generate"${txtrst};
+    INCREMENTAL_STATUS=1
+  fi
+
+  # Generate json
+  $BUILD_PATH/vendor/stag/tools/json.sh /var/lib/jenkins/builds/${device_codename}/${INCREMENTAL_FILE_NAME} incremental_pristine.json
+  mv /var/lib/jenkins/builds/${device_codename}/incremental_pristine.json /var/lib/jenkins/ota/${device_codename}/
+
+  INCREMENTAL_STATUS=0
+fi
+
 
 cd $BUILD_PATH
 export WITH_GAPPS=true
@@ -179,8 +215,50 @@ cp full_update_gapps.json /var/lib/jenkins/ota/${device_codename}/full_update_ga
 
 CUR_TARGET_FOL=${RZIP::-4}-target_files
 
-cp obj/PACKAGING/target_files_intermediates/${CUR_TARGET_FOL} /var/lib/jenkins/target_files/${device_codename}/cur/
+cp -r obj/PACKAGING/target_files_intermediates/${CUR_TARGET_FOL} /var/lib/jenkins/target_files/${device_codename}/cur/
 echo -e ${grn}"Target zip for gapps copied"${txtrst};
+
+read -r -d '' msg <<EOT
+<b>GApps Build Completed</b>
+<b>Device:-</b> ${device_codename}
+<b>Maintainer:-</b> ${maintainer}
+<b>Download:-</b> <a href="${test_link}">here</a>
+EOT
+
+telegram-send --format html "$msg"
+
+# Check if Pristine Incremental was generated
+if [ "${INCREMENTAL_STATUS}" = "0" ]; then
+  echo -e ${grn}"Generating incremental update for Gapps"${txtrst};
+
+  REL_TARGET_FOL=$(find /var/lib/jenkins/target_files/${device_codename}/rel/ -type d -name "*GApps*" -print -quit)
+  # Get folder name
+  REL_TARGET_FOL=$(basename $REL_TARGET_FOL)
+
+  # Set variables
+  TYPE=$(echo ${REL_TARGET_FOL} | cut -d'-' -f5)
+  OLD_DATE=$(echo ${REL_TARGET_FOL} | cut -d'-' -f6-7)
+  NEW_DATE=$(echo ${CUR_TARGET_FOL} | cut -d'-' -f6-7)
+
+  INCREMENTAL_FILE_NAME=StagOS-${device_codename}-incremental-${TYPE}-${OLD_DATE}-${NEW_DATE}.zip
+
+  # Generate incremental update
+  # go to BUILD_PATH
+  cd $BUILD_PATH
+  ota_from_target_files -i /var/lib/jenkins/target_files/${device_codename}/rel/${REL_TARGET_FOL} /var/lib/jenkins/target_files/${device_codename}/cur/${CUR_TARGET_FOL} /var/lib/jenkins/builds/${device_codename}/${INCREMENTAL_FILE_NAME}
+
+  # Check if incremental update was generated
+  if [ ! -f /var/lib/jenkins/builds/${device_codename}/${INCREMENTAL_FILE_NAME} ]; then
+    echo -e ${red}"Incremental update failed to generate"${txtrst};
+    INCREMENTAL_STATUS=1
+  fi
+
+  # Generate json
+  $BUILD_PATH/vendor/stag/tools/json.sh /var/lib/jenkins/builds/${device_codename}/${INCREMENTAL_FILE_NAME} incremental_gapps.json
+  mv /var/lib/jenkins/builds/${device_codename}/incremental_gapps.json /var/lib/jenkins/ota/${device_codename}/
+
+  INCREMENTAL_STATUS=0
+fi
 
 telegram-send "Builds done ${maintainer}"
 
