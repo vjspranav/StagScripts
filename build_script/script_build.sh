@@ -90,6 +90,13 @@ source build/envsetup.sh
 
 # If lunch fails don't continue
 if ! lunch stag_"${device_codename}"-"${release_type}"-"${build_type}"; then
+  read -r -d '' msg <<EOT
+<b>Build Failed</b>: Lunch failed
+<b>Device:-</b> ${device_codename}
+<b>Maintainer:-</b> ${maintainer}
+EOT
+
+  telegram-send --format html "$msg"
   exit 1
 fi
 
@@ -109,10 +116,17 @@ echo -e ${cya}"Images deleted from OUT dir"${txtrst};
 fi
 
 # Accounting for any vendorsetup changes
-. build/envsetup.sh
+source build/envsetup.sh
 
 # If lunch fails don't continue
 if ! lunch stag_"${device_codename}"-"${release_type}"-"${build_type}"; then
+  read -r -d '' msg <<EOT
+<b>Build Failed</b>: Lunch failed
+<b>Device:-</b> ${device_codename}
+<b>Maintainer:-</b> ${maintainer}
+EOT
+
+  telegram-send --format html "$msg"
   exit 1
 fi
 
@@ -145,7 +159,20 @@ EOT
 
 telegram-send --format html "$msg"
 else
-telegram-send "Build for ${device_codename} failed. ${maintainer}"
+
+# Read the contents of the error.log file into a variable
+error_log=$(cat /home/vjspranav/stag/out/error.log)
+
+# Define the API endpoint and the payload to be sent
+url='https://api.stagb.in/dev/content'
+buid='c824974b-4aae-41b1-92c3-7842a3b7f487'
+payload=$(jq -n --arg error_log "$error_log" --arg buid "$buid" '{data: $error_log, buid: $buid}')
+
+# Send the payload using cURL and extract the generated URL
+stagbin_url=$(curl -s -X POST -H "Content-Type: application/json" -d "$payload" "$url")
+sbin_id=$(jq -r '.id' <<< $stagbin_url)
+stagbin_url=https://stagb.in/${sbin_id}
+telegram-send "Build for ${device_codename} failed. ${maintainer} Check the logs here: ${stagbin_url}"
 exit 1
 fi
 
