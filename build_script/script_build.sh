@@ -161,7 +161,7 @@ telegram-send --format html "$msg"
 else
 
 # Read the contents of the error.log file into a variable
-error_log=$(cat /home/vjspranav/stag/out/error.log)
+error_log=$(cat ${OUT_PATH}/error.log)
 
 # Define the API endpoint and the payload to be sent
 url='https://api.stagb.in/dev/content'
