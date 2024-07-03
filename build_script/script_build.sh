@@ -213,7 +213,6 @@ if find /var/lib/jenkins/target_files/${device_codename}/rel/ -type d -name "*Pr
   if [ ! -f /var/lib/jenkins/builds/${device_codename}/${INCREMENTAL_FILE_NAME} ]; then
     echo -e ${red}"Incremental update failed to generate"${txtrst};
     INCREMENTAL_STATUS=1
-  fi
   else
     # Generate json
     $BUILD_PATH/vendor/stag/tools/json.sh /var/lib/jenkins/builds/${device_codename}/${INCREMENTAL_FILE_NAME} incremental_pristine.json ${RZIP}
@@ -279,7 +278,6 @@ if [ "${INCREMENTAL_STATUS}" = "0" ]; then
   if [ ! -f /var/lib/jenkins/builds/${device_codename}/${INCREMENTAL_FILE_NAME} ]; then
     echo -e ${red}"Incremental update failed to generate"${txtrst};
     INCREMENTAL_STATUS=1
-  fi
   else
     # Generate json
     $BUILD_PATH/vendor/stag/tools/json.sh /var/lib/jenkins/builds/${device_codename}/${INCREMENTAL_FILE_NAME} incremental_gapps.json ${RZIP}
