@@ -214,12 +214,13 @@ if find /var/lib/jenkins/target_files/${device_codename}/rel/ -type d -name "*Pr
     echo -e ${red}"Incremental update failed to generate"${txtrst};
     INCREMENTAL_STATUS=1
   fi
+  else
+    # Generate json
+    $BUILD_PATH/vendor/stag/tools/json.sh /var/lib/jenkins/builds/${device_codename}/${INCREMENTAL_FILE_NAME} incremental_pristine.json ${RZIP}
+    mv /var/lib/jenkins/builds/${device_codename}/incremental_pristine.json /var/lib/jenkins/ota/${device_codename}/
 
-  # Generate json
-  $BUILD_PATH/vendor/stag/tools/json.sh /var/lib/jenkins/builds/${device_codename}/${INCREMENTAL_FILE_NAME} incremental_pristine.json
-  mv /var/lib/jenkins/builds/${device_codename}/incremental_pristine.json /var/lib/jenkins/ota/${device_codename}/
-
-  INCREMENTAL_STATUS=0
+    INCREMENTAL_STATUS=0
+  fi
 fi
 
 
@@ -279,12 +280,13 @@ if [ "${INCREMENTAL_STATUS}" = "0" ]; then
     echo -e ${red}"Incremental update failed to generate"${txtrst};
     INCREMENTAL_STATUS=1
   fi
+  else
+    # Generate json
+    $BUILD_PATH/vendor/stag/tools/json.sh /var/lib/jenkins/builds/${device_codename}/${INCREMENTAL_FILE_NAME} incremental_gapps.json ${RZIP}
+    mv /var/lib/jenkins/builds/${device_codename}/incremental_gapps.json /var/lib/jenkins/ota/${device_codename}/
 
-  # Generate json
-  $BUILD_PATH/vendor/stag/tools/json.sh /var/lib/jenkins/builds/${device_codename}/${INCREMENTAL_FILE_NAME} incremental_gapps.json
-  mv /var/lib/jenkins/builds/${device_codename}/incremental_gapps.json /var/lib/jenkins/ota/${device_codename}/
-
-  INCREMENTAL_STATUS=0
+    INCREMENTAL_STATUS=0
+  fi
 fi
 
 telegram-send "Builds done ${maintainer}"
